@@ -1,6 +1,7 @@
-import WeakBox from './weakbox';
+import Ephemeron from './ephemeron';
 
-const b = new WeakBox(5);
-console.log(b.get());
-console.log(b.get());
-console.log(b.get());
+const e = new Ephemeron({}, 5);
+
+while (e.get()) {}
+
+console.log('made it out');
