@@ -1,8 +1,12 @@
 export default class Ephemeron {
+  // an Ephemeron is a data structure that stores a key and a value.
+  // the key is held weakly. When the key is collected, the value
+  // is replaced by #f.
+
   static #primitiveLabel = Symbol('primitive');
 
   static #registry = new FinalizationRegistry((ephemeron) => {
-    ephemeron.#weakenValue();
+    ephemeron.#killValue();
   });
 
   #key;
@@ -10,11 +14,8 @@ export default class Ephemeron {
   #val;
 
   constructor(key, val) {
-    if (Ephemeron.#canBeWeak(key)) {
-      this.#key = new WeakRef(key);
-    } else {
-      this.#key = new WeakRef(Ephemeron.#makePrimitiveKey(key));
-    }
+    this.#key = Ephemeron.#canBeWeak(key) ? key : Ephemeron.#makePrimitiveKey(key);
+    this.#registry.register(this.#key, this);
 
     this.#val = val;
   }
@@ -23,12 +24,6 @@ export default class Ephemeron {
     const maybeVal = this.#val;
     if (maybeVal === undefined) {
       return false;
-    } else if (maybeVal instanceof WeakRef) {
-      if (maybeVal.deref() === undefined) {
-        return false;
-      } else {
-        return maybeVal.deref();
-      }
     } else {
       return maybeVal;
     }
@@ -42,7 +37,7 @@ export default class Ephemeron {
     return { primLabel: Ephemeron.#primitiveLabel, value: key };
   }
 
-  static #weakenValue() {
-    this.#val = new WeakRef(this.#val);
+  #killValue() {
+    this.#val = undefined;
   }
 }
