@@ -5,8 +5,8 @@ export default class Ephemeron {
 
   static #primitiveLabel = Symbol('primitive');
 
-  static #registry = new FinalizationRegistry((ephemeron) => {
-    ephemeron.#killValue();
+  static #registry = new FinalizationRegistry((killEphemeronValue) => {
+    killEphemeronValue();
   });
 
   #key;
@@ -15,7 +15,7 @@ export default class Ephemeron {
 
   constructor(key, val) {
     this.#key = Ephemeron.#canBeWeak(key) ? key : Ephemeron.#makePrimitiveKey(key);
-    this.#registry.register(this.#key, this);
+    Ephemeron.#registry.register(this.#key, () => { this.#killValue(); });
 
     this.#val = val;
   }
