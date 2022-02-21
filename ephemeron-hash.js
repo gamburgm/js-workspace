@@ -6,7 +6,9 @@ export default class EphemeronHash {
   // expose it to the user) so that we can remove it from the set when we delete entries.
 
   #weakMap = new WeakMap();
+
   #refSet = new Set();
+
   #finalizationGroup = new FinalizationRegistry(EphemeronHash.#cleanup);
 
   static #cleanup({ set, ref }) {
@@ -14,6 +16,7 @@ export default class EphemeronHash {
   }
 
   // TODO what are the construction modes for ephemeron-hash in racket?
+  // solution: there's something else we can do -- examine how racketscript implements iteration
   constructor(iterable) {
     for (const [key, value] of iterable) {
       this.set(key, value);
@@ -26,7 +29,7 @@ export default class EphemeronHash {
     this.#weakMap.set(key, { value, ref });
     this.#refSet.add(ref);
 
-    // This registers the `key` as needing cleanup when it gets garbage collected. 
+    // This registers the `key` as needing cleanup when it gets garbage collected.
     // 'cleanup' refers to the callback passed to the FinalizationRegistry constructor above.
     // The arguments are:
     //
