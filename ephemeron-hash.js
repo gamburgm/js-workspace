@@ -9,6 +9,8 @@ export default class EphemeronHash {
 
   #refSet = new Set();
 
+  #iterator = undefined;
+
   #finalizationGroup = new FinalizationRegistry(EphemeronHash.#cleanup);
 
   static #cleanup({ set, ref }) {
@@ -18,9 +20,9 @@ export default class EphemeronHash {
   // TODO what are the construction modes for ephemeron-hash in racket?
   // solution: there's something else we can do -- examine how racketscript implements iteration
   constructor(iterable) {
-    for (const [key, value] of iterable) {
-      this.set(key, value);
-    }
+    iterable.forEach(([k, v]) => {
+      this.set(k, v);
+    });
   }
 
   set(key, value) {
@@ -63,12 +65,38 @@ export default class EphemeronHash {
     return true;
   }
 
-  *[Symbol.iterator]() {
-    for (const ref of this.#refSet) {
-      const key = ref.deref();
-      if (!key) continue;
-      const { value } = this.#weakMap.get(key);
-      yield [key, value];
+  iterateFirst() {
+    if (this.#refSet.size() === 0) return false; // TODO is it worth filtering initially?
+    this.#iterator = this.#refSet.keys().entries();
+
+    return this.#maybeNextIter();
+  }
+
+  iterateNext() {
+    return this.#maybeNextIter();
+  }
+
+  #maybeNextIter() {
+    let nextRef;
+    do {
+      const nextIter = this.#iterator.next();
+      if (nextIter.done) {
+        this.#iterator = undefined;
+        return false;
+      } else {
+        [, nextRef] = nextIter;
+      }
+    } while (EphemeronHash.#isLive(nextRef));
+
+    if (EphemeronHash.#isLive(nextRef)) {
+      const key = nextRef.deref();
+      return [key, this.get(key)];
+    } else {
+      return false;
     }
+  }
+
+  static #isLive(ref) {
+    return ref && ref.deref() !== undefined;
   }
 }
